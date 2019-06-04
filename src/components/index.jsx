@@ -3,13 +3,13 @@ import React from "react";
 class Game extends React.Component {
 	constructor(props){
 		super();
-		this.state = {player_position:{x:130, y:0}, bullets:[], targets:[], score: 0};
+		this.state = {player_position:{x:130, y:0}, bullets:[], targets:[], score: 0, countDown:60};
 		this.player_dimension = {width:10, height:10};
 		this.bullet_dimension = {width:3, height:3};
 		this.target_dimension = {width: 6, height: 6};
 		this.handleAction = this.handleAction.bind(this);
 		this.bulletIntervalId = '';
-		this.targetIntervalId = '';
+		this.countDownIntervalId = '';
 	}
 
 	drawCanvas(){
@@ -47,9 +47,29 @@ class Game extends React.Component {
 		}
 		this.createTarget(initial_targets);
 		window.addEventListener('keyup',this.handleAction);
+		this.countDownTimer();
+	}
+
+	countDownTimer(){
+		if(this.countDownIntervalId){
+			clearTimeout(this.countDownIntervalId);
+		}
+
+		if(this.state.countDown == 0){
+			return;
+		}
+
+		setTimeout(() => {
+			let countDown = this.state.countDown - 1 ;
+			this.setState({countDown });
+			this.countDownTimer();
+		}, 1000)
 	}
 
 	createTarget(inview_targets){
+		if(this.state.countDown == 0){
+			return;
+		}
 		let targets = inview_targets;
 		
 		targets.forEach((target) => {
@@ -142,12 +162,20 @@ class Game extends React.Component {
 		let visible_targets_and_bullets = this.checkForCollision(bullets,targets);
 		this.bulletIntervalId = setTimeout(() => {
 			let updated_targets = this.createTarget(visible_targets_and_bullets['targets']);
+			if(!updated_targets){
+				alert(`Hello man! This is the end. You could only kill ${this.state.score} targets in 60 seconds`);
+				return;
+			}
 			this.setState({bullets:visible_targets_and_bullets['bullets'], targets:updated_targets, score:visible_targets_and_bullets['score']});
 			this.updateBulletPosition();
 		},100);
 	}
 
 	shoot(){
+		if(this.state.countDown == 0){
+			alert("this is the end ");
+			return;
+		}
 		let bullet_position = {x:(this.state.player_position.x)+ this.player_dimension.width/2, y: 10};
 		let bullets = this.state.bullets.slice();
 		bullets.push(bullet_position);
@@ -155,15 +183,18 @@ class Game extends React.Component {
 	}
 
 	handleAction(e){
+
 		let x_directions = {37:'left', 39:'right'};
 		if(e.which == 32){
 			this.shoot();
 			return;
 		}
-		let direction = e.target.dataset.direction? e.target.direction : x_directions[e.which];
+		let direction = e.target.dataset.direction? e.target.dataset.direction : x_directions[e.which];
 		let displacement = direction == 'right' ? 5 : direction == 'left'? -5 : 0;
 
-		let within_coordinates = ((this.state.player_position.x + displacement) >= 0) && ((this.state.player_position.x + this.player_dimension.width + displacement) <= 360) ? true : false;
+		console.log("the desired direction is ",direction);
+
+		let within_coordinates = ((this.state.player_position.x + displacement) >= 0) && ((this.state.player_position.x + this.player_dimension.width + displacement) <= 300) ? true : false;
 		if(within_coordinates){
 			let player_position = this.state.player_position;
 			player_position.x += displacement;
@@ -180,15 +211,19 @@ class Game extends React.Component {
 			<div >
 				<canvas id="canvas" > 
 				</canvas>
-
-				<div className="controls" >
-					<div className="controls__movement">
-						<button className="control-button " onClick={ this.handleAction } data-direction="left"> {'<'} </button>
-						<button className="control-button " onClick={ this.handleAction } data-direction="right"> {'>'} </button>
-					</div>
-					<div className="controls__action">
-						<button className="control-button" onClick={() => {return this.shoot()}} > ^ </button>
-						<h3> {this.state.score} </h3>
+				<div className="container">
+					<div className="row" style={{width:360}}>
+						<div className="col-6 col-lg-6 col-md-6 col-xl-6 controls__movement">
+							<button className="control-button " onClick={ this.handleAction } data-direction="left"> {'<'} </button>
+							<button className="control-button " onClick={ this.handleAction } data-direction="right"> {'>'} </button>
+						</div>
+						<div className="col-2 col-lg-2 col-md-2 col-xl-2 center">
+							<h3> {this.state.score} </h3>
+							<h3> {this.state.countDown} </h3>
+						</div>
+						<div className="col-4 col-lg-4 col-md-4 col-xl-4 center">
+							<button className="control-button pull-right" onClick={() => {return this.shoot()}} > ^ </button>
+						</div>
 					</div>
 				</div>
 			</div>
